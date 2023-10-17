@@ -141,7 +141,7 @@
 
 const express = require("express");
 const router = express.Router();
-
+const fs = require('fs')
 const connection = require("../config/db.js");
 const { body, validationResult } = require("express-validator");
 const multer = require('multer')
@@ -255,12 +255,12 @@ router.get("/(:id)", function (req, res) {
 });
 
 router.patch(
-  "/update/:id",
-  [
-    body("nama").notEmpty(),
-    body("nrp").notEmpty(),
-    body("id_jurusan").notEmpty(),
-  ],
+  '/update/:id',
+  upload.fields([
+    { name: 'gambar', maxCount: 1 },
+    { name: 'swa_foto', maxCount: 1 },
+  ]),
+  [body('nama').notEmpty(), body('nrp').notEmpty(), body('id_jurusan').notEmpty()],
   (req, res) => {
     const error = validationResult(req);
     if (!error.isEmpty()) {
@@ -269,28 +269,56 @@ router.patch(
       });
     }
     let id = req.params.id;
-    let data = {
-      nama: req.body.nama,
-      nrp: req.body.nrp,
-      id_jurusan: req.body.id_jurusan,
-    };
-    connection.query(
-      `update mahasiswa set ? where id_m = ${id}`,
-      data,
-      function (err, rows) {
+    // Lakukan pengecekan apakah ada file yang diunggah
+    let gambar = req.files['gambar'] ? req.files['gambar'][0].filename : null;
+    let swa_foto = req.files['swa_foto'] ? req.files['swa_foto'][0].filename : null;
+    connection.query(`select * from mahasiswa where id_m = ${id}`, function (err, rows) {
+      if (err) {
+        return res.status(500).json({
+          status: false,
+          message: 'Server Error',
+        });
+      }
+      if (rows.length === 0) {
+        return res.status(404).json({
+          status: false,
+          message: 'Not Found',
+        });
+      }
+      const gambarLama = rows[0].gambar;
+      const swa_fotoLama = rows[0].swa_foto;
+
+      // Hapus file lama jika ada
+      if (gambarLama && gambar) {
+        const pathGambar = path.join(__dirname, '../public/images', gambarLama);
+        fs.unlinkSync(pathGambar);
+      }
+      if (swa_fotoLama && swa_foto) {
+        const pathSwaFoto = path.join(__dirname, '../public/images', swa_fotoLama);
+        fs.unlinkSync(pathSwaFoto);
+      }
+
+      let Data = {
+        nama: req.body.nama,
+        nrp: req.body.nrp,
+        id_jurusan: req.body.id_jurusan,
+        gambar: gambar,
+        swa_foto: swa_foto,
+      };
+      connection.query(`update mahasiswa set ? where id_m = ${id}`, Data, function (err, rows) {
         if (err) {
           return res.status(500).json({
             status: false,
-            message: "server error",
+            message: 'Server Error',
           });
         } else {
           return res.status(200).json({
             status: true,
-            message: "update",
+            message: 'Update Success..!',
           });
         }
-      }
-    );
+      });
+    });
   }
 );
 
