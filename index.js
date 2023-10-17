@@ -1,6 +1,8 @@
 const express = require("express");
 const app = express();
 const port = 3000;
+const cors = require('cors')
+app.use(cors())
 
 const mhsRouter = require("./router/mahasiswa.js");
 const jurusanRouter = require("./router/jurusan.js");

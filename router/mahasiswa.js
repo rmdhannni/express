@@ -324,6 +324,7 @@ router.patch(
 
 router.delete("/delete/(:id)", function (req, res) {
   let id = req.params.id;
+  
   connection.query(
     `delete from mahasiswa where id_m = ${id}`,
     function (err, rows) {
